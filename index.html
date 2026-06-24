@@ -354,7 +354,7 @@
   async function loadProducts() {
     try {
       const res = await fetch(
-        `https://api.base44.com/v1/apps/${APP_ID}/entities/Product?order_by=name&limit=1000`,
+        `https://api.base44.com/v1/apps/${APP_ID}/entities/Product?sort_by=name&limit=1000`,
         { headers: { "api_key": API_KEY } }
       );
       const data = await res.json();
