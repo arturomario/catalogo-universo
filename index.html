@@ -144,6 +144,12 @@
       border: 1px solid #f3f4f6;
       display: flex;
       flex-direction: column;
+      cursor: pointer;
+      transition: transform 0.1s, box-shadow 0.1s;
+    }
+    .product-card:hover {
+      transform: translateY(-2px);
+      box-shadow: 0 4px 10px rgba(0,0,0,0.1);
     }
     .product-img {
       width: 100%;
@@ -216,6 +222,131 @@
     }
     @keyframes spin { to { transform: rotate(360deg); } }
 
+    /* MODAL DE DETALLE */
+    .modal-overlay {
+      display: none;
+      position: fixed;
+      inset: 0;
+      background: rgba(0,0,0,0.5);
+      z-index: 200;
+      align-items: flex-end;
+      justify-content: center;
+    }
+    .modal-overlay.open {
+      display: flex;
+    }
+    @media (min-width: 640px) {
+      .modal-overlay {
+        align-items: center;
+      }
+    }
+    .modal-card {
+      background: #fff;
+      width: 100%;
+      max-width: 480px;
+      max-height: 88vh;
+      overflow-y: auto;
+      border-radius: 20px 20px 0 0;
+      animation: slideUp 0.2s ease-out;
+    }
+    @media (min-width: 640px) {
+      .modal-card {
+        border-radius: 20px;
+        max-height: 80vh;
+      }
+    }
+    @keyframes slideUp {
+      from { transform: translateY(24px); opacity: 0; }
+      to { transform: translateY(0); opacity: 1; }
+    }
+    .modal-img-wrap {
+      position: relative;
+    }
+    .modal-img {
+      width: 100%;
+      aspect-ratio: 1;
+      object-fit: cover;
+      display: block;
+      background: #f3f4f6;
+    }
+    .modal-placeholder {
+      width: 100%;
+      aspect-ratio: 1;
+      background: #f3f4f6;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      font-size: 56px;
+    }
+    .modal-close {
+      position: absolute;
+      top: 12px;
+      right: 12px;
+      width: 32px;
+      height: 32px;
+      border-radius: 50%;
+      background: rgba(0,0,0,0.55);
+      color: #fff;
+      border: none;
+      font-size: 18px;
+      cursor: pointer;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      line-height: 1;
+    }
+    .modal-body {
+      padding: 20px;
+    }
+    .modal-name {
+      font-size: 18px;
+      font-weight: 800;
+      color: #111;
+      line-height: 1.3;
+      margin-bottom: 4px;
+    }
+    .modal-brand {
+      font-size: 12px;
+      color: #9ca3af;
+      margin-bottom: 14px;
+    }
+    .modal-desc-label {
+      font-size: 11px;
+      font-weight: 700;
+      color: #6b7280;
+      text-transform: uppercase;
+      letter-spacing: 0.03em;
+      margin-bottom: 6px;
+    }
+    .modal-desc {
+      font-size: 14px;
+      color: #374151;
+      line-height: 1.55;
+      white-space: pre-line;
+      margin-bottom: 20px;
+    }
+    .modal-desc-empty {
+      font-size: 13px;
+      color: #9ca3af;
+      font-style: italic;
+      margin-bottom: 20px;
+    }
+    .modal-btn-consultar {
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      gap: 8px;
+      background: #22c55e;
+      color: #fff;
+      font-size: 14px;
+      font-weight: 700;
+      padding: 13px;
+      border-radius: 12px;
+      text-decoration: none;
+      transition: background 0.15s;
+    }
+    .modal-btn-consultar:hover { background: #16a34a; }
+
     /* FOOTER */
     .footer {
       text-align: center;
@@ -264,6 +395,26 @@
 
 <div class="footer">Universo Premium</div>
 
+<!-- MODAL DE DETALLE DE PRODUCTO -->
+<div class="modal-overlay" id="modal-overlay">
+  <div class="modal-card">
+    <div class="modal-img-wrap">
+      <button class="modal-close" id="modal-close" aria-label="Cerrar">✕</button>
+      <div id="modal-img-container"></div>
+    </div>
+    <div class="modal-body">
+      <div class="modal-name" id="modal-name"></div>
+      <div class="modal-brand" id="modal-brand"></div>
+      <div class="modal-desc-label">Descripción</div>
+      <div id="modal-desc-container"></div>
+      <a class="modal-btn-consultar" id="modal-btn-consultar" href="#" target="_blank">
+        <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><path d="M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2z"/></svg>
+        Consultar por este producto
+      </a>
+    </div>
+  </div>
+</div>
+
 <script>
   const APP_ID = "69b326911a27e82f09e67748";
   const API_KEY = "467163ec0ee544b5a15bcdf2b91e4c74";
@@ -284,6 +435,52 @@
   function normalize(str) {
     return (str || "").toLowerCase().normalize("NFD").replace(/[\u0300-\u036f]/g, "").trim();
   }
+
+  function escapeHtml(str) {
+    const div = document.createElement("div");
+    div.textContent = str || "";
+    return div.innerHTML;
+  }
+
+  // ── Modal de detalle ──────────────────────────────────────────
+  const modalOverlay = document.getElementById("modal-overlay");
+
+  function openModal(p) {
+    document.getElementById("modal-name").textContent = p.name || "";
+    document.getElementById("modal-brand").textContent = p.brand || "";
+    document.getElementById("modal-brand").style.display = p.brand ? "block" : "none";
+
+    const imgContainer = document.getElementById("modal-img-container");
+    imgContainer.innerHTML = p.image
+      ? `<img class="modal-img" src="${p.image}" alt="${escapeHtml(p.name)}" onerror="this.outerHTML='<div class=&quot;modal-placeholder&quot;>📦</div>'" />`
+      : `<div class="modal-placeholder">📦</div>`;
+
+    const descContainer = document.getElementById("modal-desc-container");
+    if (p.description && p.description.trim()) {
+      descContainer.innerHTML = `<div class="modal-desc">${escapeHtml(p.description)}</div>`;
+    } else {
+      descContainer.innerHTML = `<div class="modal-desc-empty">Sin descripción disponible.</div>`;
+    }
+
+    const waProductUrl = `https://wa.me/${telefono}?text=${encodeURIComponent(`Hola ${nombre}, me interesa: ${p.name} 😊`)}`;
+    document.getElementById("modal-btn-consultar").href = waProductUrl;
+
+    modalOverlay.classList.add("open");
+    document.body.style.overflow = "hidden";
+  }
+
+  function closeModal() {
+    modalOverlay.classList.remove("open");
+    document.body.style.overflow = "";
+  }
+
+  document.getElementById("modal-close").addEventListener("click", closeModal);
+  modalOverlay.addEventListener("click", (e) => {
+    if (e.target === modalOverlay) closeModal();
+  });
+  document.addEventListener("keydown", (e) => {
+    if (e.key === "Escape") closeModal();
+  });
 
   function render() {
     const search = document.getElementById("search-input").value;
@@ -317,18 +514,23 @@
       card.className = "product-card";
       card.innerHTML = `
         ${p.image
-          ? `<img class="product-img" src="${p.image}" alt="${p.name}" onerror="this.style.display='none';this.nextElementSibling.style.display='flex'" /><div class="product-placeholder" style="display:none">📦</div>`
+          ? `<img class="product-img" loading="lazy" src="${p.image}" alt="${escapeHtml(p.name)}" onerror="this.style.display='none';this.nextElementSibling.style.display='flex'" /><div class="product-placeholder" style="display:none">📦</div>`
           : `<div class="product-placeholder">📦</div>`
         }
         <div class="product-body">
-          <div class="product-name">${p.name}</div>
-          ${p.brand ? `<div class="product-brand">${p.brand}</div>` : ""}
+          <div class="product-name">${escapeHtml(p.name)}</div>
+          ${p.brand ? `<div class="product-brand">${escapeHtml(p.brand)}</div>` : ""}
           <a class="btn-consultar" href="${waProductUrl}" target="_blank">
             <svg width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><path d="M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2z"/></svg>
             Consultar
           </a>
         </div>
       `;
+      // Presionar la tarjeta (fuera del botón Consultar) abre el detalle
+      card.addEventListener("click", (e) => {
+        if (e.target.closest(".btn-consultar")) return; // el botón sigue yendo directo a WhatsApp
+        openModal(p);
+      });
       grid.appendChild(card);
     });
   }
