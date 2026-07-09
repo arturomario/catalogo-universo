@@ -243,8 +243,8 @@
     .modal-card {
       background: #fff;
       width: 100%;
-      max-width: 480px;
-      max-height: 88vh;
+      max-width: 520px;
+      max-height: 90vh;
       overflow-y: auto;
       border-radius: 20px 20px 0 0;
       animation: slideUp 0.2s ease-out;
@@ -252,7 +252,7 @@
     @media (min-width: 640px) {
       .modal-card {
         border-radius: 20px;
-        max-height: 80vh;
+        max-height: 85vh;
       }
     }
     @keyframes slideUp {
@@ -261,22 +261,63 @@
     }
     .modal-img-wrap {
       position: relative;
+      background: #f3f4f6;
     }
     .modal-img {
       width: 100%;
-      aspect-ratio: 1;
+      height: 380px;
       object-fit: cover;
       display: block;
       background: #f3f4f6;
     }
     .modal-placeholder {
       width: 100%;
-      aspect-ratio: 1;
+      height: 380px;
       background: #f3f4f6;
       display: flex;
       align-items: center;
       justify-content: center;
       font-size: 56px;
+    }
+    .gallery-arrow {
+      position: absolute;
+      top: 50%;
+      transform: translateY(-50%);
+      width: 36px;
+      height: 36px;
+      border-radius: 50%;
+      background: rgba(0,0,0,0.5);
+      color: #fff;
+      border: none;
+      font-size: 18px;
+      cursor: pointer;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+    }
+    .gallery-arrow.prev { left: 12px; }
+    .gallery-arrow.next { right: 12px; }
+    .gallery-dots {
+      position: absolute;
+      bottom: 12px;
+      left: 50%;
+      transform: translateX(-50%);
+      display: flex;
+      gap: 6px;
+    }
+    .gallery-dot {
+      width: 7px;
+      height: 7px;
+      border-radius: 50%;
+      background: rgba(255,255,255,0.55);
+      cursor: pointer;
+      border: none;
+      padding: 0;
+    }
+    .gallery-dot.active {
+      background: #fff;
+      width: 18px;
+      border-radius: 4px;
     }
     .modal-close {
       position: absolute;
@@ -444,16 +485,58 @@
 
   // ── Modal de detalle ──────────────────────────────────────────
   const modalOverlay = document.getElementById("modal-overlay");
+  let galleryImages = [];
+  let galleryIndex = 0;
+
+  function renderGallery() {
+    const imgContainer = document.getElementById("modal-img-container");
+    const total = galleryImages.length;
+
+    if (total === 0) {
+      imgContainer.innerHTML = `<div class="modal-placeholder">📦</div>`;
+      return;
+    }
+
+    const url = galleryImages[galleryIndex];
+    const arrows = total > 1 ? `
+      <button class="gallery-arrow prev" id="gallery-prev" aria-label="Anterior">‹</button>
+      <button class="gallery-arrow next" id="gallery-next" aria-label="Siguiente">›</button>
+      <div class="gallery-dots">
+        ${galleryImages.map((_, i) => `<button class="gallery-dot ${i === galleryIndex ? "active" : ""}" data-idx="${i}"></button>`).join("")}
+      </div>
+    ` : "";
+
+    imgContainer.innerHTML = `
+      <img class="modal-img" src="${url}" alt="" onerror="this.outerHTML='<div class=&quot;modal-placeholder&quot;>📦</div>'" />
+      ${arrows}
+    `;
+
+    if (total > 1) {
+      document.getElementById("gallery-prev").addEventListener("click", () => {
+        galleryIndex = (galleryIndex - 1 + total) % total;
+        renderGallery();
+      });
+      document.getElementById("gallery-next").addEventListener("click", () => {
+        galleryIndex = (galleryIndex + 1) % total;
+        renderGallery();
+      });
+      document.querySelectorAll(".gallery-dot").forEach(dot => {
+        dot.addEventListener("click", () => {
+          galleryIndex = Number(dot.dataset.idx);
+          renderGallery();
+        });
+      });
+    }
+  }
 
   function openModal(p) {
     document.getElementById("modal-name").textContent = p.name || "";
     document.getElementById("modal-brand").textContent = p.brand || "";
     document.getElementById("modal-brand").style.display = p.brand ? "block" : "none";
 
-    const imgContainer = document.getElementById("modal-img-container");
-    imgContainer.innerHTML = p.image
-      ? `<img class="modal-img" src="${p.image}" alt="${escapeHtml(p.name)}" onerror="this.outerHTML='<div class=&quot;modal-placeholder&quot;>📦</div>'" />`
-      : `<div class="modal-placeholder">📦</div>`;
+    galleryImages = [p.image, ...(Array.isArray(p.extra_images) ? p.extra_images : [])].filter(Boolean);
+    galleryIndex = 0;
+    renderGallery();
 
     const descContainer = document.getElementById("modal-desc-container");
     if (p.description && p.description.trim()) {
